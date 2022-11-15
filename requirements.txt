@@ -1,0 +1,15 @@
+
+fastapi
+uvicorn
+python-multipart
+pillow
+aiofiles
+tqdm
+matplotlib
+seaborn
+pandas
+gdown
+requests
+Ipython 
+Pyaml
+easyocr
