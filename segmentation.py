@@ -2,11 +2,12 @@ import torch
 from PIL import Image, ImageDraw, ImageFont
 import io
 import easyocr
+import os 
 
 
 def get_yolov5():
-    model = torch.hub.load('./yolov5', 'custom', path='./model/best.pt', source='local')
-    model.conf = 0.8
+    model = torch.hub.load('./yolov5', 'custom', path='./yolov5/runs/train/yolov5s_results/weights/best.pt' ,source='local') 
+    model.conf = 0.7
     return model
 
 
@@ -23,18 +24,26 @@ def get_image_from_bytes(binary_image, max_size=1024):
     return resized_image
 
 
-def detect_and_return_ocr(result, image_path):
-    result = result.pandas().xyxy[0]
-    if len(result) != 0:
-        image = Image.open(image_path)
-        cropped_image = image.crop((result.iloc[0].tolist()[:4]))
+def detect_and_return_ocr(input_image):
+    model = get_yolov5()
+
+    results = model(input_image)
+    result_df = results.pandas().xyxy[0]
+    results.render() 
+    output_file_dir = os.path.join(os.getcwd(), "out_put")
+    results.save(save_dir=output_file_dir)
+    output_file_path = os.path.join(output_file_dir, os.listdir(output_file_dir)[0])
+    if not result_df.empty:
+        image = Image.open(output_file_path)
+        cropped_image = image.crop((result_df.iloc[0].tolist()[:4]))
         cropped_image.save("cropped_image.jpg")
         reader = easyocr.Reader(['en'])
         result_text = reader.readtext("cropped_image.jpg")
         draw = ImageDraw.Draw(image)
-        myFont = ImageFont.truetype('FreeMono.ttf', 65)
-        draw.text((0, 0), result_text[0][1], (255, 0, 0) , font=myFont)
-        image.save(image_path)
-        return result_text[0][1]
+        font = ImageFont.truetype("./arial.ttf", 80)
+        draw.text((0, 0), result_text[0][1], (255, 0, 0) , font=font , align="center")
+        image.save(output_file_path)
+        result_df["text"] = result_text[0][1]
+        return result_df
     else:
         return "No Number Plate Found"
